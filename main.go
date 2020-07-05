@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/gob"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -17,9 +18,10 @@ import (
 	"github.com/btnguyen2k/consu/reddo"
 	"github.com/btnguyen2k/consu/semita"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
+
+	"main/cocostore"
 )
 
 const (
@@ -30,7 +32,8 @@ const (
 
 	exterMyAppId = "demo"
 
-	sessionKeyLoginToken = "login_token"
+	sessionKeyLoginToken  = "auth_jwt"
+	sessionKeySessionInfo = "sess_info"
 )
 
 var (
@@ -51,13 +54,16 @@ type SessionInfo struct {
 }
 
 func main() {
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 	go goUpdateExterInfo(ticker, httpClient)
 
 	// Echo instance
 	e := echo.New()
-	e.Use(session.Middleware(sessions.NewCookieStore([]byte("s3cr3t"))))
+	// e.Use(session.Middleware(sessions.NewCookieStore([]byte("s3cr3t"))))
+	// e.Use(session.Middleware(memstore.NewMemStore([]byte("s3cr3t"))))
+	e.Use(session.Middleware(cocostore.NewCompressedCookieStore([]byte("s3cr3t"))))
+	gob.Register(SessionInfo{})
 
 	// Routes
 	e.GET("/login", handlerLogin)
@@ -195,6 +201,8 @@ func goUpdateExterInfo(ticker *time.Ticker, httpClient *http.Client) {
 	}
 }
 
+/*--------------------------------------------------------------------------------*/
+
 // Handler
 func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World!")
@@ -227,12 +235,22 @@ func handlerLoginCallback(c echo.Context) error {
 
 	// store authToken in session
 	httpSess, _ := session.Get("session", c)
-	httpSess.Options = &sessions.Options{
-		Path:   "/",
-		MaxAge: 86400 * 7,
-	}
 	httpSess.Values[sessionKeyLoginToken] = jwtStr
-	httpSess.Save(c.Request(), c.Response())
+	httpSess.Values[sessionKeySessionInfo] = sess
+	err = httpSess.Save(c.Request(), c.Response())
+	if err == cocostore.ErrorValueTooLong {
+		log.Printf("[WARN] Session is too big, cleaning up")
+		// special case: cleanup session if leftover values make its length exceeds limit
+		httpSess.Values = map[interface{}]interface{}{sessionKeyLoginToken: jwtStr, sessionKeySessionInfo: sess}
+		err = httpSess.Save(c.Request(), c.Response())
+		if err == cocostore.ErrorValueTooLong {
+			log.Printf("[ERROR] Session is too big to store in cookie")
+		} else if err != nil {
+			log.Printf("[ERROR] Error while saving session: %s", err)
+		}
+	} else if err != nil {
+		log.Printf("[ERROR] Error while saving session: %s", err)
+	}
 	html := fmt.Sprintf(`Login successfully.<br/>
 <pre>
 - ID        : %s
@@ -247,10 +265,12 @@ func handlerLoginCallback(c echo.Context) error {
 
 // Handler
 func handlerSecure(c echo.Context) error {
+	httpSess, _ := session.Get("session", c)
 	data := make(map[string]interface{})
 	data["method"] = c.Request().Method
 	data["url"] = c.Request().URL.String()
 	data["time"] = time.Now()
+	data["session"] = httpSess.Values[sessionKeySessionInfo]
 	js, _ := json.Marshal(data)
 	return c.String(http.StatusOK, string(js))
 }
