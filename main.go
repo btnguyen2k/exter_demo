@@ -29,6 +29,7 @@ const (
 	urlExterApiInfo             = urlExterApiBase + "/info"
 	urlExterApiVerifyLoginToken = urlExterApiBase + "/api/verifyLoginToken"
 	urlExterXLogin              = "http://localhost:8080/app/#/xlogin"
+	urlExterXCheck              = "http://localhost:8080/app/#/xcheck"
 
 	exterMyAppId = "demo"
 
@@ -68,6 +69,7 @@ func main() {
 	// Routes
 	e.GET("/login", handlerLogin)
 	e.GET("/loginCallback", handlerLoginCallback)
+	e.GET("/logout", handlerLogout)
 	e.Any("/secure", handlerSecure, middleSecurity)
 	e.Any("/secure/", handlerSecure, middleSecurity)
 	e.Any("/secure/*", handlerSecure, middleSecurity)
@@ -143,12 +145,12 @@ func _validateJwtToken(jwtStr string) (string, *SessionInfo, error) {
 	}
 	s := semita.NewSemita(data)
 	if status, err := s.GetValueOfType("status", reddo.TypeInt); err != nil || status == nil || status.(int64) != 200 {
-		return "", nil, errors.New(fmt.Sprintf("[ERROR] Error verifying Exter token. Error: %s / API status: %v", err.Error(), status))
+		return "", nil, errors.New(fmt.Sprintf("[ERROR] Error verifying Exter token. Error: %s / API status: %v", err, status))
 	}
 
 	newJwtStr, err := s.GetValueOfType("data", reddo.TypeString)
 	if err != nil || newJwtStr == nil || newJwtStr.(string) == "" {
-		return "", nil, errors.New(fmt.Sprintf("[ERROR] Error verifying Exter token. Error: %s / New token: %v", err.Error(), newJwtStr))
+		return "", nil, errors.New(fmt.Sprintf("[ERROR] Error verifying Exter token. Error: %s / New token: %v", err, newJwtStr))
 	}
 	sess, err := _parseJwtToken(newJwtStr.(string))
 	if err != nil {
@@ -212,7 +214,23 @@ func hello(c echo.Context) error {
 func handlerLogin(c echo.Context) error {
 	returnUrl := url.QueryEscape(c.QueryParam("returnUrl"))
 	returnUrl = c.Scheme() + "://" + c.Request().Host + "/loginCallback?token=${token}&returnUrl=" + returnUrl
-	return c.Redirect(http.StatusFound, urlExterXLogin+"?app="+exterMyAppId+"&returnUrl="+url.QueryEscape(returnUrl))
+	return c.Redirect(http.StatusFound, urlExterXCheck+"?app="+exterMyAppId+"&returnUrl="+url.QueryEscape(returnUrl))
+}
+
+// Handler
+func handlerLogout(c echo.Context) error {
+	returnUrl := c.QueryParam("returnUrl")
+	if returnUrl == "" {
+		returnUrl = "/"
+	}
+	httpSess, _ := session.Get("session", c)
+	httpSess.Values = make(map[interface{}]interface{})
+	err := httpSess.Save(c.Request(), c.Response())
+	if err != nil {
+		log.Printf("[ERROR] Error while saving session: %s", err)
+	}
+	html := fmt.Sprintf(`Log out successfully. Click to <a href="%s">continue</a>.`, returnUrl)
+	return c.HTML(http.StatusOK, html)
 }
 
 // Handler
@@ -272,7 +290,14 @@ func handlerSecure(c echo.Context) error {
 	data["time"] = time.Now()
 	data["session"] = httpSess.Values[sessionKeySessionInfo]
 	js, _ := json.Marshal(data)
-	return c.String(http.StatusOK, string(js))
+	urlLogout := "/logout?returnUrl=" + url.QueryEscape(c.Request().RequestURI)
+	html := fmt.Sprintf(`Login data:<br/>
+<textarea style="width: 100%%" rows="4">
+%s
+</textarea>
+<a href="%s">Click logout</>
+`, js, urlLogout)
+	return c.HTML(http.StatusOK, html)
 }
 
 /*----------------------------------------------------------------------*/
