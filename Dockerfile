@@ -1,7 +1,6 @@
 FROM alpine:3
 RUN mkdir /app
 COPY . /app
-RUN ls -la /app
 RUN apk add --no-cache -U tzdata bash ca-certificates \
     && update-ca-certificates \
     && cp /usr/share/zoneinfo/Asia/Ho_Chi_Minh /etc/localtime \
