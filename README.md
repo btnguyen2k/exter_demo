@@ -1,5 +1,3 @@
-# exter_demo
-
 A simple application to demonstrate [Exter](https://github.com/btnguyen2k/exter/).
 
 ## Live demo
@@ -29,5 +27,5 @@ $ ./main
 |Env|Default Value|Description|
 |---|-------------|-----------|
 |FORCE_LOGIN|`false`|If set, redirect user to Exter's `xlogin` page. Otherwise, redirect user to Exter's `xcheck` page.|
-|EXTER_BASE_URL|`http://localhost`|Specify Exter's base URL (example `http://exteross.gpvcloud.com`|
-|HEROKU|`false`|Used if deploy on [Heroku](https://www.heroku.com/).|
+|EXTER_BASE_URL|`http://localhost`|Specify Exter's base URL (example `http://exteross.gpvcloud.com`)|
+|HEROKU|`false`|Set if deploy on [Heroku](https://www.heroku.com/).|
