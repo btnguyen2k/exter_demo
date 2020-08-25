@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -93,8 +94,13 @@ func main() {
 	e.Any("/secure/*", handlerSecure, middleSecurity)
 	e.GET("/*", hello)
 
+	port := 6789
+	if os.Getenv("HEROKU") != "" {
+		port, _ = strconv.Atoi(os.Getenv("PORT"))
+	}
+
 	// Start server
-	e.Logger.Fatal(e.Start(":6789"))
+	e.Logger.Fatal(e.Start(":" + strconv.Itoa(port)))
 }
 
 func _readAll(resp *http.Response) ([]byte, error) {
