@@ -13,6 +13,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/btnguyen2k/consu/reddo"
@@ -25,12 +27,6 @@ import (
 )
 
 const (
-	urlExterApiBase             = "http://localhost:3000"
-	urlExterApiInfo             = urlExterApiBase + "/info"
-	urlExterApiVerifyLoginToken = urlExterApiBase + "/api/verifyLoginToken"
-	urlExterXLogin              = "http://localhost:8080/app/#/xlogin"
-	urlExterXCheck              = "http://localhost:8080/app/#/xcheck"
-
 	exterMyAppId = "demo"
 
 	sessionKeyLoginToken  = "auth_jwt"
@@ -41,6 +37,15 @@ var (
 	exterRsaPubKey       *rsa.PublicKey
 	httpClient           = &http.Client{Timeout: 10 * time.Second}
 	errorSessionNotReady = errors.New("session is not ready, try again latter")
+
+	forceLogin                  = false
+	urlExterBase                = "http://localhost"
+	urlExterApiBase             = urlExterBase + ":3000"
+	urlExterApiInfo             = urlExterApiBase + "/info"
+	urlExterApiVerifyLoginToken = urlExterApiBase + "/api/verifyLoginToken"
+	urlExterPageBase            = urlExterBase + ":8080"
+	urlExterXLogin              = urlExterPageBase + "/app/#/xlogin"
+	urlExterXCheck              = urlExterPageBase + "/app/#/xcheck"
 )
 
 type SessionInfo struct {
@@ -55,6 +60,19 @@ type SessionInfo struct {
 }
 
 func main() {
+	if strings.TrimSpace(os.Getenv("FORCE_LOGIN")) != "" {
+		forceLogin = true
+	}
+	if strings.TrimSpace(os.Getenv("EXTER_BASE_URL")) != "" {
+		urlExterBase = strings.TrimRight(strings.TrimSpace(os.Getenv("EXTER_BASE_URL")), "/")
+		urlExterApiBase = urlExterBase
+		urlExterApiInfo = urlExterApiBase + "/info"
+		urlExterApiVerifyLoginToken = urlExterApiBase + "/api/verifyLoginToken"
+		urlExterPageBase = urlExterBase
+		urlExterXLogin = urlExterPageBase + "/app/#/xlogin"
+		urlExterXCheck = urlExterPageBase + "/app/#/xcheck"
+	}
+
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 	go goUpdateExterInfo(ticker, httpClient)
@@ -214,7 +232,11 @@ func hello(c echo.Context) error {
 func handlerLogin(c echo.Context) error {
 	returnUrl := url.QueryEscape(c.QueryParam("returnUrl"))
 	returnUrl = c.Scheme() + "://" + c.Request().Host + "/loginCallback?token=${token}&returnUrl=" + returnUrl
-	return c.Redirect(http.StatusFound, urlExterXCheck+"?app="+exterMyAppId+"&returnUrl="+url.QueryEscape(returnUrl))
+	urlLogin := urlExterXCheck
+	if forceLogin {
+		urlLogin = urlExterXLogin
+	}
+	return c.Redirect(http.StatusFound, urlLogin+"?app="+exterMyAppId+"&returnUrl="+url.QueryEscape(returnUrl))
 }
 
 // Handler
