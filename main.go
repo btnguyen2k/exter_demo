@@ -231,7 +231,9 @@ func goUpdateExterInfo(ticker *time.Ticker, httpClient *http.Client) {
 
 // Handler
 func hello(c echo.Context) error {
-	return c.String(http.StatusOK, "Hello, World!")
+	html := fmt.Sprintf(`<h1>Hello, world</h1>
+This is a public page. Click <a href="%s">here</a> to access a secured page (require login).`, "/secure")
+	return c.HTML(http.StatusOK, html)
 }
 
 // Handler
@@ -297,7 +299,7 @@ func handlerLoginCallback(c echo.Context) error {
 	} else if err != nil {
 		log.Printf("[ERROR] Error while saving session: %s", err)
 	}
-	html := fmt.Sprintf(`Login successfully.<br/>
+	html := fmt.Sprintf(`<h1>Login successfully.</h1>
 <pre>
 - ID        : %s
 - Token type: %s
@@ -305,7 +307,7 @@ func handlerLoginCallback(c echo.Context) error {
 - User id   : %s
 - Expiry    : %s
 </pre>
-<a href="%s">Click</a> to continue.`, sess.Id, sess.Type, sess.Channel, sess.UserId, sess.ExpiredAt, returnUrl)
+Click <a href="%s">here</a> to continue.`, sess.Id, sess.Type, sess.Channel, sess.UserId, sess.ExpiredAt, returnUrl)
 	return c.HTML(http.StatusOK, html)
 }
 
@@ -319,12 +321,11 @@ func handlerSecure(c echo.Context) error {
 	data["session"] = httpSess.Values[sessionKeySessionInfo]
 	js, _ := json.Marshal(data)
 	urlLogout := "/logout?returnUrl=" + url.QueryEscape(c.Request().RequestURI)
-	html := fmt.Sprintf(`Login data:<br/>
+	html := fmt.Sprintf(`<h1>Login data:</h1>
 <textarea style="width: 100%%" rows="4">
 %s
 </textarea>
-<a href="%s">Click logout</>
-`, js, urlLogout)
+This is a secured page. You should only see it if authenticated. Click <a href="%s">here</a> to logout`, js, urlLogout)
 	return c.HTML(http.StatusOK, html)
 }
 
