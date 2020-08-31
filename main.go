@@ -45,8 +45,8 @@ var (
 	urlExterApiInfo             = urlExterApiBase + "/info"
 	urlExterApiVerifyLoginToken = urlExterApiBase + "/api/verifyLoginToken"
 	urlExterPageBase            = urlExterBase + ":8080"
-	urlExterXLogin              = urlExterPageBase + "/app/#/xlogin"
-	urlExterXCheck              = urlExterPageBase + "/app/#/xcheck"
+	urlExterXLogin              = urlExterPageBase + "/app/xlogin"
+	urlExterXCheck              = urlExterPageBase + "/app/xcheck"
 )
 
 type SessionInfo struct {
@@ -70,8 +70,8 @@ func main() {
 		urlExterApiInfo = urlExterApiBase + "/info"
 		urlExterApiVerifyLoginToken = urlExterApiBase + "/api/verifyLoginToken"
 		urlExterPageBase = urlExterBase
-		urlExterXLogin = urlExterPageBase + "/app/#/xlogin"
-		urlExterXCheck = urlExterPageBase + "/app/#/xcheck"
+		urlExterXLogin = urlExterPageBase + "/app/xlogin"
+		urlExterXCheck = urlExterPageBase + "/app/xcheck"
 	}
 
 	ticker := time.NewTicker(5 * time.Minute)
