@@ -2,7 +2,7 @@ A simple application to demonstrate [Exter](https://github.com/btnguyen2k/exter/
 
 ## Live demo
 
-See `exter_demo` in action at https://demo-exterapp.herokuapp.com/.
+See `exter_demo` in action at https://demo-exterapp.gpvcloud.com.
 
 ## Build and run on your machine
 
